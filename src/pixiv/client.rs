@@ -1,8 +1,12 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use bytes::Bytes;
 use lazy_static::lazy_static;
+use reqwest::cookie::Jar;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
+use reqwest::Url;
 use serde::de::DeserializeOwned;
 
 use super::error::Error;
@@ -16,7 +20,11 @@ lazy_static! {
     pub static ref INSTANCE: Client = Client::new().unwrap();
 }
 
+const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0";
+const PIXIV_ROOT: &str = "https://www.pixiv.net/";
+
 pub struct Client {
+    jar: Arc<Jar>,
     http: reqwest::Client,
 }
 
@@ -27,30 +35,39 @@ impl Client {
 
             default_headers.insert(
                 reqwest::header::REFERER,
-                HeaderValue::from_static("https://www.pixiv.net/"),
+                HeaderValue::from_static(PIXIV_ROOT),
             );
             default_headers.insert(
                 reqwest::header::USER_AGENT,
-                HeaderValue::from_static("PixivIOSApp/7.13.3 (iOS 14.6; iPhone13,2)"),
+                HeaderValue::from_static(USER_AGENT),
             );
 
             default_headers
         };
 
+        let jar = Arc::new(Jar::default());
         let http = reqwest::Client::builder()
+            .cookie_provider(Arc::clone(&jar))
             .default_headers(default_headers)
             .build()?;
 
-        Ok(Self { http })
+        Ok(Self { jar, http })
+    }
+
+    pub fn login(&self, cookie: impl AsRef<str>) {
+        let cookie = cookie.as_ref();
+        let cookie = format!("PHPSESSID={cookie}");
+        let url = Url::parse(PIXIV_ROOT).unwrap();
+        self.jar.add_cookie_str(&cookie, &url)
     }
 
     pub async fn profile(&self, id: ProfileId) -> Result<Profile> {
-        let url = format!("https://www.pixiv.net/ajax/user/{}/profile/all", id);
+        let url = format!("{PIXIV_ROOT}ajax/user/{id}/profile/all");
         self.get(url).await
     }
 
     pub async fn ugoira_meta(&self, id: IllustId) -> Result<UgoiraMeta> {
-        let url = format!("https://www.pixiv.net/ajax/illust/{}/ugoira_meta", id);
+        let url = format!("{PIXIV_ROOT}ajax/illust/{id}/ugoira_meta");
         self.get(url).await
     }
 

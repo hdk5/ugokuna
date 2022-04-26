@@ -41,6 +41,9 @@ struct Args {
     #[clap(short, long)]
     illust_ids: Vec<u32>,
 
+    #[clap(short, long)]
+    cookie: Option<String>,
+
     out_path: PathBuf,
 }
 
@@ -50,6 +53,7 @@ async fn main() -> Result<()> {
         format,
         profile_ids,
         illust_ids,
+        cookie,
         out_path,
     } = Args::parse();
 
@@ -63,6 +67,10 @@ async fn main() -> Result<()> {
         .collect::<Vec<_>>();
 
     tokio::fs::create_dir_all(&out_path).await?;
+
+    if let Some(cookie) = cookie {
+        pixiv::CLIENT.login(cookie);
+    }
 
     // 1. Get illustrations IDs
     let illust_id_provider = MasterIllustIdProvider::new(illust_ids, profile_ids);
