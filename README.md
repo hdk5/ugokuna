@@ -32,6 +32,7 @@ ARGS:
     <OUT_PATH>    
 
 OPTIONS:
+    -c, --cookie <COOKIE>
     -f, --format <FORMAT>              [default: gif] [possible values: webm, gif]
     -h, --help                         Print help information
     -i, --illust-ids <ILLUST_IDS>
